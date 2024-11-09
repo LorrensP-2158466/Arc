@@ -3,6 +3,7 @@
 datasets
 pyenv
 
+shell.nix
 
 
 # Byte-compiled / optimized / DLL files
