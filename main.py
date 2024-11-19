@@ -1,3 +1,4 @@
+import argparse
 import ast
 
 from modeling import Modeling
@@ -10,12 +11,31 @@ def setup():
     nltk.download('punkt_tab')
     nltk.download('wordnet')
 
+def argument_parser():
+    parser = argparse.ArgumentParser(description="Arc: Topic modeling tool.")
+    
+    # Define the flag for BERT
+    parser.add_argument('--bert', action='store_true', help="Use BERT for topic modeling.")
+    
+    # Define the argument for dataset path
+    parser.add_argument('--dataset-path', type=str, required=True, help="Path to the dataset for topic modeling.")
+
+    return parser
+    
+
+
 def main():
+    args = argument_parser().parse_args()
     setup();
-    # model = Modeling("datasets/data_mining_publications.txt")
-    # model.model()
-    model = Bert("datasets/data_mining_publications.txt")
-    model.model()
+
+    path = args.dataset_path
+    if args.bert:
+        model = Bert(path)
+        model.model()
+    else:
+        model = Modeling("datasets/data_mining_publications.txt")
+        model.model()
+
 
 
 
