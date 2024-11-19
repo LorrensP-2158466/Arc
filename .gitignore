@@ -5,6 +5,7 @@ pyenv
 
 shell.nix
 
+modelcache
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,6 +1,7 @@
 import ast
 
 from modeling import Modeling
+from bert_topic_modeling import Bert
 import nltk
 
 def setup():
@@ -11,7 +12,9 @@ def setup():
 
 def main():
     setup();
-    model = Modeling("datasets/database_systems_publications.txt")
+    # model = Modeling("datasets/data_mining_publications.txt")
+    # model.model()
+    model = Bert("datasets/data_mining_publications.txt")
     model.model()
 
 
