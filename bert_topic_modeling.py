@@ -24,7 +24,7 @@ class Bert():
      with open(dataset_path) as f:
         self.dataset_name = dataset_path.split("/")[-1].split(".")[0]
         with open("stopwords_kaggle.txt") as stop_words_file:
-            self.stop_words = set(map(lambda line: line.strip(), stop_words_file))
+            self.stop_words = list(map(lambda line: line.strip(), stop_words_file))
         data = [
             {'year': int(item['year']), 'title': item['title']} 
             for line in f if line
