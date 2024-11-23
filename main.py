@@ -20,7 +20,11 @@ def argument_parser():
 
     parser.add_argument('--nr-of-topics', type=int, default=6, help="Number of topics to find (clusters to use)")
 
+    parser.add_argument('--repr-nr-topics', type=int, default=5, help="Number of topics to represent in the plot based on total Publications op topic")
+
     parser.add_argument('--use-stemming', action='store_true', help="Wether to use Stemming or Lemmatization")
+
+    parser.add_argument('--interval', type=int, default=5, help="Smooth out the curves by creating year intervals on the ranges (don't do 1 please)")
 
     return parser
     
@@ -33,10 +37,10 @@ def main():
     path = args.dataset_path
     if args.bert:
         model = Bert(path)
-        model.model(args.nr_of_topics, args.use_stemming)
+        model.model(args.nr_of_topics, args.repr_nr_topics, args.use_stemming, args.repr_nr_topics)
     else:
         model = Modeling(path,  args.use_stemming)
-        model.model(args.nr_of_topics)
+        model.model(args.nr_of_topics, args.repr_nr_topics, args.interval)
 
 
 

@@ -264,6 +264,7 @@ e
 ed
 edu
 effect
+efficient
 eg
 eight
 eighty
@@ -380,6 +381,8 @@ looking
 looks
 ltd
 m
+matter
+matters
 made
 mainly
 make
@@ -603,6 +606,7 @@ throughout
 thru
 thus
 til
+time
 tip
 together
 took
@@ -735,6 +739,9 @@ backed
 backing
 backs
 backward
+base
+based
+bases
 backwards
 bb
 bd
@@ -868,6 +875,7 @@ forever
 forty
 fr
 free
+feature
 front
 full
 fully

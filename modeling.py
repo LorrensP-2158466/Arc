@@ -13,7 +13,6 @@ from nltk.tokenize import word_tokenize
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from sklearn_extra.cluster import KMedoids
 
 from word_lowering import WordLowerer, WordLemmer, WordStemmer
 
@@ -50,9 +49,11 @@ class Modeling:
             self.data = pd.DataFrame(data)
 
         
-    def model(self, nr_clusters: int = 6):
+    def model(self, nr_clusters: int = 6, top_clusters: int = 5, interval: int = 5):
+        """
+        model the dataset and plot the flow of topics
+        """
         self.make_vocabulary()
-        pprint(self.found_stopwords)
         vectorizer = TfidfVectorizer()
         tfidf_matrix = vectorizer.fit_transform(self.data["preprocessed_titles"])
 
@@ -60,26 +61,43 @@ class Modeling:
         labels = kmedoids.fit(tfidf_matrix).labels_
 
         self.data['topic'] = labels
+
+        topic_counts = self.data[self.data['topic'] != -1]['topic'].value_counts()
+        top_topics = topic_counts.nlargest(top_clusters).index.tolist()
+
         topic_trends = self.data.groupby(['year', 'topic']).size().reset_index(name='count')
-        pivot_table = topic_trends.pivot(index='year', columns='topic', values='count').fillna(0)
+        topic_trends = topic_trends[topic_trends['topic'].isin(top_topics) & (topic_trends['year'] < 2024)]
+
+        # Create our intervals
+        topic_trends['year_interval'] = (topic_trends['year'] // interval) * interval
+        interval_trends = topic_trends.groupby(['year_interval', 'topic'])['count'].sum().reset_index()
+
+        pivot_table = interval_trends.pivot(index='year_interval', columns='topic', values='count').fillna(0)
+
+        # the labels
+        topic_labels = self.create_topic_labels(tfidf_matrix, nr_clusters, labels, vectorizer)
+        top_labels = {topic: topic_labels[topic] for topic in top_topics}
 
 
-        plt.figure(figsize=(12, 12))
-        topic_labels = self.create_topic_labels(tfidf_matrix, 6, labels, vectorizer)
-        for idx, topic in enumerate(pivot_table.columns):
-            topic_label = topic_labels[idx]
-            plt.plot(pivot_table.index, pivot_table[topic], label=f"Topic: {topic_label}")
-        
-        plt.title(f"Arc Topic flow in dataset: {self.dataset_name}")
-        plt.xlabel("Year")
+        plt.figure(figsize=(12, 6))
+        for topic in pivot_table.columns:
+            label = top_labels[topic]
+            plt.plot(pivot_table.index, pivot_table[topic], 
+                    label=f"{label}")  
+
+        plt.xticks(pivot_table.index, [f'{year}-{year+interval-1}' for year in pivot_table.index])
+        plt.xticks(rotation=45)
+
+        plt.title(f"Top Topics by {interval}-Year Intervals in {self.dataset_name}")
+        plt.xlabel("Year Range")
         plt.ylabel("Number of Publications")
-        plt.legend(title="Topic", loc='center left', bbox_to_anchor=(1, 0))
+        plt.legend(title="Topics", loc='center left', bbox_to_anchor=(1.05, 0.5))
         plt.tight_layout()
         plt.show()
+        
 
     def create_topic_labels(self, matrix, n_clusters, labels, vectorizer):
-        pprint(labels)
-        k = 3  
+        k = 4 
         topics = []
 
         for i in range(n_clusters):
