@@ -5,13 +5,16 @@ import bertopic
 import pandas as pd
 import ast
 from nltk import word_tokenize          
-from nltk.stem import WordNetLemmatizer 
+from nltk.corpus import stopwords
+from word_lowering import WordLemmer, WordStemmer, WordLowerer
 
-class LemmaTokenizer:
-    def __init__(self):
-        self.wnl = WordNetLemmatizer()
+
+class Tokenizer:
+    lowerer: WordLowerer
+    def __init__(self, lowerer: WordLowerer):
+        self.lowerer = lowerer
     def __call__(self, doc):
-        return [self.wnl.lemmatize(t) for t in word_tokenize(doc)]
+        return [self.lowerer.lower(t) for t in word_tokenize(doc)]
 
 
 class Bert():
@@ -20,23 +23,30 @@ class Bert():
     def __init__(self, dataset_path: str):
      with open(dataset_path) as f:
         self.dataset_name = dataset_path.split("/")[-1].split(".")[0]
+        with open("stopwords_kaggle.txt") as stop_words_file:
+            self.stop_words = set(map(lambda line: line.strip(), stop_words_file))
         data = [
             {'year': int(item['year']), 'title': item['title']} 
-            for line in f if line 
+            for line in f if line
             for item in [ast.literal_eval(line.strip())]
         ]
         self.data = pd.DataFrame(data)
 
-    def model(self):
-
-
+    def model(self, nr_topics: int = 6, use_stemmer: bool = False):
         # Create our beautiful BERT
+        tokenizer = 0
+        if use_stemmer:
+            tokenizer = Tokenizer(WordStemmer())
+        else:
+            tokenizer = Tokenizer(WordLemmer())
+        
+
         representation_model = KeyBERTInspired()
-        vectorizer_model= CountVectorizer(tokenizer=LemmaTokenizer()) 
+        vectorizer_model= CountVectorizer(tokenizer=tokenizer, stop_words=self.stop_words) 
         topic_model = bertopic.BERTopic(
             vectorizer_model=vectorizer_model,
             representation_model=representation_model,
-            nr_topics="auto"
+            nr_topics=nr_topics
         )
 
         # perform BERT on titles
@@ -50,17 +60,16 @@ class Bert():
 
         pivot_table = topic_trends.pivot(index='year', columns='topic', values='count').fillna(0)
         
-        topic_labels = topic_model.generate_topic_labels(separator=", ", topic_prefix=False)
+        topic_labels = topic_model.generate_topic_labels(separator=" ", topic_prefix=False)
 
-        plt.figure(figsize=(12, 6))
+        plt.figure(figsize=(12, 12))
         for idx, topic in enumerate(pivot_table.columns):
             label = topic_labels[idx]
             plt.plot(pivot_table.index, pivot_table[topic], label=f"Topic: {label}")
 
-        plt.title(self.dataset_name)
+        plt.title(f"BERT Topic flow in dataset: {self.dataset_name}")
         plt.xlabel("Year")
         plt.ylabel("Number of Publications")
-        plt.legend(title="Topic", loc='upper left', bbox_to_anchor=(1.05, 1))
-        plt.grid()
+        plt.legend(title="Topic", loc='center left', bbox_to_anchor=(1, 0))
         plt.tight_layout()
         plt.show()
