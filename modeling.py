@@ -7,14 +7,16 @@ import pandas as pd
 import re
 import ast
 
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
 
+from nltk.tokenize import word_tokenize
 from sklearn.cluster import KMeans
+from sklearn_extra.cluster import KMedoids
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 from word_lowering import WordLowerer, WordLemmer, WordStemmer
+
+from memory_profiler import profile
 
 
 
@@ -48,8 +50,8 @@ class Modeling:
             ]
             self.data = pd.DataFrame(data)
 
-        
-    def model(self, nr_clusters: int = 6, top_clusters: int = 5, interval: int = 5):
+    @profile
+    def model(self, nr_clusters: int = 6, top_clusters: int = 5, interval: int = 5, save_plot_path: str = ""):
         """
         model the dataset and plot the flow of topics
         """
@@ -57,9 +59,9 @@ class Modeling:
         vectorizer = TfidfVectorizer()
         tfidf_matrix = vectorizer.fit_transform(self.data["preprocessed_titles"])
 
-        kmedoids = KMeans(n_clusters=nr_clusters, random_state=2158466)
-        labels = kmedoids.fit(tfidf_matrix).labels_
 
+        clusterer = KMeans(n_clusters=nr_clusters)
+        labels = clusterer.fit(tfidf_matrix).labels_
         self.data['topic'] = labels
 
         topic_counts = self.data[self.data['topic'] != -1]['topic'].value_counts()
@@ -75,25 +77,28 @@ class Modeling:
         pivot_table = interval_trends.pivot(index='year_interval', columns='topic', values='count').fillna(0)
 
         # the labels
-        topic_labels = self.create_topic_labels(tfidf_matrix, nr_clusters, labels, vectorizer)
-        top_labels = {topic: topic_labels[topic] for topic in top_topics}
-
+        topic_labels = self.create_topic_labels(tfidf_matrix, labels.size, labels, vectorizer)
+        topic_labels = {topic: topic_labels[topic] for topic in top_topics}
 
         plt.figure(figsize=(12, 6))
         for topic in pivot_table.columns:
-            label = top_labels[topic]
+            label = topic_labels[topic]
             plt.plot(pivot_table.index, pivot_table[topic], 
                     label=f"{label}")  
 
         plt.xticks(pivot_table.index, [f'{year}-{year+interval-1}' for year in pivot_table.index])
         plt.xticks(rotation=45)
 
-        plt.title(f"Top Topics by {interval}-Year Intervals in {self.dataset_name}")
+        plt.title(f"ARC: Topic Drift")
         plt.xlabel("Year Range")
         plt.ylabel("Number of Publications")
         plt.legend(title="Topics", loc='center left', bbox_to_anchor=(1.05, 0.5))
         plt.tight_layout()
-        plt.show()
+        plt.figtext(0.75, 0.75, f"Dataset: {self.dataset_name}\nNr of topics: {nr_clusters}\nTopics Shown: {top_clusters}\n{interval} year intervals")
+        if save_plot_path != "":
+            plt.savefig(save_plot_path)
+        else:
+            plt.show()
         
 
     def create_topic_labels(self, matrix, n_clusters, labels, vectorizer):

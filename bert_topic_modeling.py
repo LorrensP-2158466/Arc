@@ -1,3 +1,4 @@
+
 from matplotlib import pyplot as plt
 from sklearn.feature_extraction.text import CountVectorizer
 import bertopic
@@ -6,6 +7,7 @@ import ast
 from nltk import word_tokenize          
 from nltk.corpus import stopwords
 from word_lowering import WordLemmer, WordStemmer, WordLowerer
+from memory_profiler import profile
 
 
 class Tokenizer:
@@ -31,8 +33,8 @@ class Bert():
                 for item in [ast.literal_eval(line.strip())]
             ]
             self.data = pd.DataFrame(data)
-
-    def model(self, nr_topics: int = 6,repr_topics: int = 5, use_stemmer: bool = False, interval: int = 5):
+    @profile
+    def model(self, nr_topics: int = 6,repr_topics: int = 5, use_stemmer: bool = False, interval: int = 5, save_plot_path: str = ""):
         # Create our beautiful BERT
         tokenizer = 0
         if use_stemmer:
@@ -40,8 +42,6 @@ class Bert():
         else:
             tokenizer = Tokenizer(WordLemmer())
         
-
-
         vectorizer_model= CountVectorizer(tokenizer=tokenizer, stop_words=self.stop_words) 
         topic_model = bertopic.BERTopic(
             vectorizer_model=vectorizer_model,
@@ -51,13 +51,15 @@ class Bert():
         # perform BERT on titles
         titles = self.data['title'].tolist()
         topics, _ = topic_model.fit_transform(titles)
-        
+        topics = topic_model.topics_
+
         topic_labels = topic_model.generate_topic_labels(separator=" ", topic_prefix=False)
 
         self.data['topic'] = topics
 
         topic_counts = self.data[self.data['topic'] != -1]['topic'].value_counts()
         top_topics = topic_counts.nlargest(repr_topics).index.tolist()
+
 
         topic_trends = self.data.groupby(['year', 'topic']).size().reset_index(name='count')
         topic_trends = topic_trends[topic_trends['topic'].isin(top_topics) & (topic_trends['year'] < 2024)]
@@ -80,9 +82,13 @@ class Bert():
         plt.xticks(pivot_table.index, [f'{year}-{year+interval-1}' for year in pivot_table.index])
         plt.xticks(rotation=45)
 
-        plt.title(f"Top Topics by {interval}-Year Intervals in {self.dataset_name}")
+        plt.title(f"BERT: Topic Drift")
         plt.xlabel("Year Range")
         plt.ylabel("Number of Publications")
         plt.legend(title="Topics", loc='center left', bbox_to_anchor=(1.05, 0.5))
         plt.tight_layout()
-        plt.show()
+        plt.figtext(0.7, 0.7, f"Dataset: {self.dataset_name}\nNr of topics: {nr_topics}\nTopics Shown: {repr_topics}\n{interval} year intervals")
+        if save_plot_path != "":
+            plt.savefig(save_plot_path)
+        else:
+            plt.show()

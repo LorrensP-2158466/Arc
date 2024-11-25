@@ -26,6 +26,8 @@ def argument_parser():
 
     parser.add_argument('--interval', type=int, default=5, help="Smooth out the curves by creating year intervals on the ranges (don't do 1 please)")
 
+    parser.add_argument('--save-plot', type=str,  help="Save the plot to this path instead of showing it")
+
     return parser
     
 
@@ -37,10 +39,10 @@ def main():
     path = args.dataset_path
     if args.bert:
         model = Bert(path)
-        model.model(args.nr_of_topics, args.repr_nr_topics, args.use_stemming, args.repr_nr_topics)
+        model.model(args.nr_of_topics, args.repr_nr_topics, args.use_stemming, args.interval, args.save_plot)
     else:
         model = Modeling(path,  args.use_stemming)
-        model.model(args.nr_of_topics, args.repr_nr_topics, args.interval)
+        model.model(args.nr_of_topics, args.repr_nr_topics, args.interval, args.save_plot)
 
 
 
